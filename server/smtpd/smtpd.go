@@ -7,13 +7,14 @@ import (
 	"net/mail"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/axllent/mailpit/config"
 	"github.com/axllent/mailpit/storage"
 	"github.com/axllent/mailpit/utils/logger"
-	"github.com/mhale/smtpd"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/theidexisted/smtpd"
 )
 
 var (
@@ -21,7 +22,17 @@ var (
 		Name: "received_mails_total",
 		Help: "The total number of received mails",
 	})
+
+	mailReceiveLatencyHist = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "received_mails_latency_hist",
+		Help:    "The latency(in us) of received mails(hello to data transfer done)",
+		Buckets: prometheus.ExponentialBuckets(200, 1.8, 15),
+	})
 )
+
+func mailReceiveLatency(elapsed time.Duration) {
+	mailReceiveLatencyHist.Observe(float64(elapsed.Microseconds()))
+}
 
 func mailHandler(origin net.Addr, from string, to []string, data []byte) error {
 	msg, err := mail.ReadMessage(bytes.NewReader(data))
@@ -88,12 +99,13 @@ func Listen() error {
 
 func listenAndServe(addr string, handler smtpd.Handler, authHandler smtpd.AuthHandler) error {
 	srv := &smtpd.Server{
-		Addr:         addr,
-		Handler:      handler,
-		Appname:      "Mailpit",
-		Hostname:     "",
-		AuthHandler:  nil,
-		AuthRequired: false,
+		Addr:                  addr,
+		Handler:               handler,
+		ReceiveLatencyHandler: mailReceiveLatency,
+		Appname:               "Mailpit",
+		Hostname:              "",
+		AuthHandler:           nil,
+		AuthRequired:          false,
 	}
 
 	if config.SMTPAuthAllowInsecure {

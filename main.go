@@ -8,8 +8,8 @@ import (
 
 	"github.com/axllent/mailpit/cmd"
 	sendmail "github.com/axllent/mailpit/sendmail/cmd"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/axllent/mailpit/utils/logger"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {

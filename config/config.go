@@ -25,7 +25,7 @@ var (
 	DataFile string
 
 	// MaxMessages is the maximum number of messages a mailbox can have (auto-pruned every minute)
-	MaxMessages = 500
+	MaxMessages = 8000
 
 	// UseMessageDates sets the Created date using the message date, not the delivered date
 	UseMessageDates bool

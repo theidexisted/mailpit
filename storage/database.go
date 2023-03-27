@@ -31,13 +31,39 @@ import (
 
 	// sqlite (native) - https://gitlab.com/cznic/sqlite
 	_ "modernc.org/sqlite"
+	"sync"
 )
+
+type SafeTime struct {
+    t  time.Time
+    mu sync.RWMutex
+}
+
+func (t *SafeTime) Time() time.Time {
+    t.mu.RLock()
+    defer t.mu.RUnlock()
+    return t.t
+}
+
+
+func (t *SafeTime) SetTimeNow() {
+    t.mu.Lock()
+    defer t.mu.Unlock()
+    t.t = time.Now()
+}
+
+
+func (t *SafeTime) SetTime(tm time.Time) {
+    t.mu.Lock()
+    defer t.mu.Unlock()
+    t.t = tm
+}
 
 var (
 	db            *sql.DB
 	dbFile        string
 	dbIsTemp      bool
-	dbLastAction  time.Time
+	dbLastAction  SafeTime
 	dbIsIdle      bool
 	dbDataDeleted bool
 
@@ -125,7 +151,7 @@ func InitDB() error {
 	}
 
 	dbFile = p
-	dbLastAction = time.Now()
+	dbLastAction.SetTimeNow()
 
 	sigs := make(chan os.Signal, 1)
 	// catch all signals since not explicitly listing
@@ -265,7 +291,7 @@ func Store(body []byte) (string, error) {
 
 	websockets.Broadcast("new", c)
 
-	dbLastAction = time.Now()
+	dbLastAction.SetTimeNow()
 
 	return id, nil
 }
@@ -312,7 +338,7 @@ func List(start, limit int) ([]MessageSummary, error) {
 		return results, err
 	}
 
-	dbLastAction = time.Now()
+	dbLastAction.SetTimeNow()
 
 	return results, nil
 }
@@ -376,7 +402,7 @@ func Search(search string, start, limit int) ([]MessageSummary, error) {
 
 	logger.Log().Debugf("[db] search for \"%s\" in %s", search, elapsed)
 
-	dbLastAction = time.Now()
+	dbLastAction.SetTimeNow()
 
 	return results, err
 }
@@ -478,7 +504,7 @@ func GetMessage(id string) (*Message, error) {
 		return &obj, err
 	}
 
-	dbLastAction = time.Now()
+	dbLastAction.SetTimeNow()
 
 	return &obj, nil
 }
@@ -506,7 +532,7 @@ func GetMessageRaw(id string) ([]byte, error) {
 		return nil, fmt.Errorf("error decompressing message: %s", err.Error())
 	}
 
-	dbLastAction = time.Now()
+	dbLastAction.SetTimeNow()
 
 	return raw, err
 }
@@ -543,7 +569,7 @@ func GetAttachmentPart(id, partID string) (*enmime.Part, error) {
 		}
 	}
 
-	dbLastAction = time.Now()
+	dbLastAction.SetTimeNow()
 
 	return nil, errors.New("attachment not found")
 }
@@ -584,7 +610,7 @@ func MarkAllRead() error {
 	elapsed := time.Since(start)
 	logger.Log().Debugf("[db] marked %d messages as read in %s", total, elapsed)
 
-	dbLastAction = time.Now()
+	dbLastAction.SetTimeNow()
 
 	return nil
 }
@@ -607,7 +633,7 @@ func MarkAllUnread() error {
 	elapsed := time.Since(start)
 	logger.Log().Debugf("[db] marked %d messages as unread in %s", total, elapsed)
 
-	dbLastAction = time.Now()
+	dbLastAction.SetTimeNow()
 
 	return nil
 }
@@ -627,7 +653,7 @@ func MarkUnread(id string) error {
 		logger.Log().Debugf("[db] marked message %s as unread", id)
 	}
 
-	dbLastAction = time.Now()
+	dbLastAction.SetTimeNow()
 
 	return err
 }
@@ -660,7 +686,7 @@ func DeleteOneMessage(id string) error {
 		logger.Log().Debugf("[db] deleted message %s", id)
 	}
 
-	dbLastAction = time.Now()
+	dbLastAction.SetTimeNow()
 	dbDataDeleted = true
 
 	return err
@@ -707,7 +733,7 @@ func DeleteAllMessages() error {
 		logger.Log().Debugf("[db] deleted %d messages in %s", total, elapsed)
 	}
 
-	dbLastAction = time.Now()
+	dbLastAction.SetTimeNow()
 	dbDataDeleted = false
 
 	websockets.Broadcast("prune", nil)
@@ -722,7 +748,7 @@ func StatsGet() MailboxStats {
 		unread = CountUnread()
 	)
 
-	dbLastAction = time.Now()
+	dbLastAction.SetTimeNow()
 
 	q := sqlf.From("mailbox").
 		Select(`DISTINCT Tags`).

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/axllent/mailpit/config"
 	"github.com/axllent/mailpit/server/websockets"
 	"github.com/axllent/mailpit/utils/logger"
@@ -17,6 +18,7 @@ import (
 	"github.com/leporo/sqlf"
 )
 
+var mailReceived prometheus.Gauge
 // Return a header field as a []*mail.Address, or "null" is not found/empty
 func addressToSlice(env *enmime.Envelope, key string) []*mail.Address {
 	data, err := env.AddressList(key)
@@ -72,13 +74,13 @@ func cleanString(str string) string {
 // if total is greater than the threshold
 func dbCron() {
 	for {
-		time.Sleep(60 * time.Second)
+		time.Sleep(30 * time.Minute)
 		start := time.Now()
 
 		// check if database contains deleted data and has not beein in use
 		// for 5 minutes, if so VACUUM
 		currentTime := time.Now()
-		diff := currentTime.Sub(dbLastAction)
+		diff := currentTime.Sub(dbLastAction.Time())
 		if dbDataDeleted && diff.Minutes() > 5 {
 			dbDataDeleted = false
 			_, err := db.Exec("VACUUM")
@@ -148,6 +150,7 @@ func dbCron() {
 			}
 
 			dbDataDeleted = true
+			mailReceived.Sub(float64(len(ids)))
 
 			elapsed := time.Since(start)
 			logger.Log().Debugf("[db] auto-pruned %d messages in %s", len(ids), elapsed)

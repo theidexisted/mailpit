@@ -9,6 +9,7 @@ import (
 	"github.com/axllent/mailpit/cmd"
 	sendmail "github.com/axllent/mailpit/sendmail/cmd"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/axllent/mailpit/utils/logger"
 )
 
 func main() {
@@ -19,6 +20,7 @@ func main() {
 	}
 
 	go func() {
+		logger.Log().Infof("[http] starting metrics server on http://localhost:2112/metrics")
 		http.Handle("/metrics", promhttp.Handler())
 		http.ListenAndServe(":2112", nil)
 	}()

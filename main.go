@@ -1,19 +1,27 @@
 package main
 
 import (
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/axllent/mailpit/cmd"
 	sendmail "github.com/axllent/mailpit/sendmail/cmd"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
+
 	exec, err := os.Executable()
 	if err != nil {
 		panic(err)
 	}
+
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		http.ListenAndServe(":2112", nil)
+	}()
 
 	// running directly
 	if normalize(filepath.Base(exec)) == normalize(filepath.Base(os.Args[0])) {

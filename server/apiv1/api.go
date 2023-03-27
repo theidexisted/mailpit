@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/axllent/mailpit/config"
 	"github.com/axllent/mailpit/storage"
 	"github.com/gorilla/mux"
@@ -158,6 +159,7 @@ func DownloadRaw(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(data)
 }
 
+var mailReceived prometheus.Gauge
 // DeleteMessages (method: DELETE) deletes all messages matching IDS.
 // If no IDs are provided then all messages are deleted.
 func DeleteMessages(w http.ResponseWriter, r *http.Request) {
@@ -171,12 +173,14 @@ func DeleteMessages(w http.ResponseWriter, r *http.Request) {
 			httpError(w, err.Error())
 			return
 		}
+		mailReceived.Set(0)
 	} else {
 		for _, id := range data.IDs {
 			if err := storage.DeleteOneMessage(id); err != nil {
 				httpError(w, err.Error())
 				return
 			}
+			mailReceived.Dec()
 		}
 	}
 

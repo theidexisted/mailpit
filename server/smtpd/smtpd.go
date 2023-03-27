@@ -12,6 +12,15 @@ import (
 	"github.com/axllent/mailpit/storage"
 	"github.com/axllent/mailpit/utils/logger"
 	"github.com/mhale/smtpd"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+)
+
+var (
+	mailReceived = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "received_mails_total",
+		Help: "The total number of received mails",
+	})
 )
 
 func mailHandler(origin net.Addr, from string, to []string, data []byte) error {
@@ -33,6 +42,7 @@ func mailHandler(origin net.Addr, from string, to []string, data []byte) error {
 		}
 		return err
 	}
+	mailReceived.Inc()
 
 	subject := msg.Header.Get("Subject")
 	logger.Log().Debugf("[smtp] received (%s) from:%s to:%s subject:%q", cleanIP(origin), from, to[0], subject)

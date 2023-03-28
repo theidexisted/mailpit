@@ -22,13 +22,25 @@ var (
 		Name: "received_mails_total",
 		Help: "The total number of received mails",
 	})
-
+	sessionNum = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "realtime_session",
+		Help: "The realtime mail client sessions",
+	})
 	mailReceiveLatencyHist = promauto.NewHistogram(prometheus.HistogramOpts{
 		Name:    "received_mails_latency_hist",
 		Help:    "The latency(in us) of received mails(hello to data transfer done)",
 		Buckets: prometheus.ExponentialBuckets(200, 1.8, 15),
 	})
 )
+
+
+func mailSessionOpHandler(isNewConnection bool ) {
+	if isNewConnection {
+		sessionNum.Inc()
+	} else {
+		sessionNum.Dec()
+	}
+}
 
 func mailReceiveLatency(elapsed time.Duration) {
 	mailReceiveLatencyHist.Observe(float64(elapsed.Microseconds()))
@@ -102,6 +114,7 @@ func listenAndServe(addr string, handler smtpd.Handler, authHandler smtpd.AuthHa
 		Addr:                  addr,
 		Handler:               handler,
 		ReceiveLatencyHandler: mailReceiveLatency,
+		SessionOpHandler: mailSessionOpHandler,
 		Appname:               "Mailpit",
 		Hostname:              "",
 		AuthHandler:           nil,

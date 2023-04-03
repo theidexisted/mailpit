@@ -151,8 +151,8 @@ func ChangeSimLattency(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	old_lat := simulateReceiveLatency
-	simulateReceiveLatency = time.Duration(lat_num * int(time.Microsecond))
-	logger.Log().Infof("[http] change sim latency from %d to %d", old_lat, simulateReceiveLatency)
+	simulateReceiveLatency = time.Duration(lat_num) * time.Microsecond
+	logger.Log().Infof("[http] change sim latency from %s to %s", old_lat, simulateReceiveLatency)
 
 	w.Header().Add("Content-Type", "text/plain")
 	_, _ = w.Write([]byte("ok"))

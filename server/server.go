@@ -88,6 +88,7 @@ func defaultRoutes() *mux.Router {
 	r.HandleFunc(config.Webroot+"api/v1/message/{id}/headers", middleWareFunc(apiv1.Headers)).Methods("GET")
 	r.HandleFunc(config.Webroot+"api/v1/message/{id}", middleWareFunc(apiv1.GetMessage)).Methods("GET")
 	r.HandleFunc(config.Webroot+"api/v1/info", middleWareFunc(apiv1.AppInfo)).Methods("GET")
+	r.HandleFunc(config.Webroot+"api/v1/simulate_latency/{lat}", middleWareFunc(apiv1.ChangeSimLattency)).Methods("GET")
 
 	return r
 }

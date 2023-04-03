@@ -31,6 +31,7 @@ var (
 		Help:    "The latency(in us) of received mails(hello to data transfer done)",
 		Buckets: prometheus.ExponentialBuckets(200, 1.8, 15),
 	})
+	simulateReceiveLatency=time.Duration(0)
 )
 
 
@@ -65,6 +66,7 @@ func mailHandler(origin net.Addr, from string, to []string, data []byte) error {
 		}
 		return err
 	}
+	time.Sleep(time.Microsecond * simulateReceiveLatency)
 	mailReceived.Inc()
 
 	subject := msg.Header.Get("Subject")

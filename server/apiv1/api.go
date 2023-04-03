@@ -8,10 +8,12 @@ import (
 	"net/mail"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/axllent/mailpit/config"
 	"github.com/axllent/mailpit/storage"
+	"github.com/axllent/mailpit/utils/logger"
 	"github.com/gorilla/mux"
 )
 
@@ -138,6 +140,23 @@ func Headers(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(bytes)
 }
 
+var simulateReceiveLatency time.Duration;
+func ChangeSimLattency(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	lat_num, err := strconv.Atoi(vars["lat"])
+
+	if err != nil {
+		httpError(w, err.Error())
+		return
+	}
+	old_lat := simulateReceiveLatency
+	simulateReceiveLatency = time.Duration(lat_num * int(time.Microsecond))
+	logger.Log().Infof("[http] change sim latency from %d to %d", old_lat, simulateReceiveLatency)
+
+	w.Header().Add("Content-Type", "text/plain")
+	_, _ = w.Write([]byte("ok"))
+}
 // DownloadRaw (method: GET) returns the full email source as plain text
 func DownloadRaw(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)

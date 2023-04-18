@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"sync/atomic"
 
 	"github.com/axllent/mailpit/config"
 	"github.com/axllent/mailpit/storage"
@@ -18,7 +19,7 @@ import (
 )
 
 var (
-	mailReceived = promauto.NewGauge(prometheus.GaugeOpts{
+	MailReceived = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "received_mails_total",
 		Help: "The total number of received mails",
 	})
@@ -31,7 +32,7 @@ var (
 		Help:    "The latency(in us) of received mails(hello to data transfer done)",
 		Buckets: prometheus.ExponentialBuckets(200, 1.8, 15),
 	})
-	simulateReceiveLatency=time.Duration(0)
+	SimulateReceiveLatencyUS int64 = 0
 )
 
 
@@ -66,8 +67,10 @@ func mailHandler(origin net.Addr, from string, to []string, data []byte) error {
 		}
 		return err
 	}
-	time.Sleep(time.Microsecond * simulateReceiveLatency)
-	mailReceived.Inc()
+	lat := time.Microsecond * time.Duration(atomic.LoadInt64(&SimulateReceiveLatencyUS))
+	logger.Log().Debugf("[smtp] Simulate server latency with sleep :%s", lat)
+	time.Sleep(lat)
+	MailReceived.Inc()
 
 	subject := msg.Header.Get("Subject")
 	logger.Log().Debugf("[smtp] received (%s) from:%s to:%s subject:%q", cleanIP(origin), from, to[0], subject)

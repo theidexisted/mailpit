@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/mail"
+	"sync/atomic"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/axllent/mailpit/config"
 	"github.com/axllent/mailpit/storage"
+	smtpd "github.com/axllent/mailpit/server/smtpd"
 	"github.com/axllent/mailpit/utils/logger"
 	"github.com/gorilla/mux"
 )
@@ -140,21 +141,25 @@ func Headers(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(bytes)
 }
 
-var simulateReceiveLatency time.Duration;
 func ChangeSimLattency(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
-	lat_num, err := strconv.Atoi(vars["lat"])
+	lat_num, err := strconv.ParseInt(vars["lat"], 10 , 64)
 
 	if err != nil {
 		httpError(w, err.Error())
 		return
 	}
-	old_lat := simulateReceiveLatency
-	simulateReceiveLatency = time.Duration(lat_num) * time.Microsecond
-	logger.Log().Infof("[http] change sim latency from %s to %s", old_lat, simulateReceiveLatency)
 
+	to_duration := func(i int64) time.Duration {
+		return time.Microsecond * time.Duration(i)
+	}
+
+	old_lat := atomic.LoadInt64(&smtpd.SimulateReceiveLatencyUS)
+	atomic.StoreInt64(&smtpd.SimulateReceiveLatencyUS, int64(lat_num))
+	logger.Log().Infof("[http] change sim latency from %s to %s",to_duration(old_lat), to_duration(lat_num))
 	w.Header().Add("Content-Type", "text/plain")
+
 	_, _ = w.Write([]byte("ok"))
 }
 // DownloadRaw (method: GET) returns the full email source as plain text
@@ -178,7 +183,6 @@ func DownloadRaw(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(data)
 }
 
-var mailReceived prometheus.Gauge
 // DeleteMessages (method: DELETE) deletes all messages matching IDS.
 // If no IDs are provided then all messages are deleted.
 func DeleteMessages(w http.ResponseWriter, r *http.Request) {
@@ -192,14 +196,14 @@ func DeleteMessages(w http.ResponseWriter, r *http.Request) {
 			httpError(w, err.Error())
 			return
 		}
-		mailReceived.Set(0)
+		smtpd.MailReceived.Set(0)
 	} else {
 		for _, id := range data.IDs {
 			if err := storage.DeleteOneMessage(id); err != nil {
 				httpError(w, err.Error())
 				return
 			}
-			mailReceived.Dec()
+			smtpd.MailReceived.Dec()
 		}
 	}
 

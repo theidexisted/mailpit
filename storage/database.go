@@ -29,6 +29,7 @@ import (
 	"github.com/mattn/go-shellwords"
 	uuid "github.com/satori/go.uuid"
 
+
 	// sqlite (native) - https://gitlab.com/cznic/sqlite
 	_ "modernc.org/sqlite"
 	"sync"
@@ -124,17 +125,20 @@ func InitDB() error {
 		p = fmt.Sprintf("%s-%d.db", path.Join(os.TempDir(), "mailpit"), time.Now().UnixNano())
 		dbIsTemp = true
 		logger.Log().Debugf("[db] using temporary database: %s", p)
-	} else {
+	} else if p != "memory" {
+		// Don't normalize memory
 		p = filepath.Clean(p)
 	}
 
 	config.DataFile = p
 
-	logger.Log().Debugf("[db] opening database %s", p)
-
 	var err error
 
 	dsn := fmt.Sprintf("file:%s?cache=shared", p)
+	if p == "memory" {
+		dsn  = "file::memory:"
+	}
+	logger.Log().Debugf("[db] opening database %s", dsn)
 
 	db, err = sql.Open("sqlite", dsn)
 	if err != nil {
@@ -168,7 +172,7 @@ func InitDB() error {
 	}()
 
 	// auto-prune & delete
-	go dbCron()
+	//go dbCron()
 
 	return nil
 }

@@ -23,6 +23,11 @@ var (
 		Name: "received_mails_total",
 		Help: "The total number of received mails",
 	})
+	sessionSoFar = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "accumulate_session_cnt",
+		Help: "The total number of history session",
+	})
+
 	sessionNum = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "realtime_session",
 		Help: "The realtime mail client sessions",
@@ -39,6 +44,7 @@ var (
 func mailSessionOpHandler(isNewConnection bool ) {
 	if isNewConnection {
 		sessionNum.Inc()
+		sessionSoFar.Inc()
 	} else {
 		sessionNum.Dec()
 	}

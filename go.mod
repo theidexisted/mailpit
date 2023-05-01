@@ -11,7 +11,7 @@ require (
 	github.com/jhillyerd/enmime v0.11.0
 	github.com/k3a/html2text v1.1.0
 	github.com/klauspost/compress v1.16.0
-	github.com/leporo/sqlf v1.3.0
+	github.com/leporo/sqlf v1.4.0
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/prometheus/client_golang v1.14.0
 	github.com/satori/go.uuid v1.2.0

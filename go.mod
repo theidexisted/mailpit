@@ -20,7 +20,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/tg123/go-htpasswd v1.2.1
 	github.com/theidexisted/smtpd v0.9.6
-	modernc.org/sqlite v1.21.0
+	modernc.org/sqlite v1.22.1
 )
 
 require (
@@ -61,7 +61,7 @@ require (
 	lukechampine.com/uint128 v1.2.0 // indirect
 	modernc.org/cc/v3 v3.40.0 // indirect
 	modernc.org/ccgo/v3 v3.16.13 // indirect
-	modernc.org/libc v1.22.3 // indirect
+	modernc.org/libc v1.22.5 // indirect
 	modernc.org/mathutil v1.5.0 // indirect
 	modernc.org/memory v1.5.0 // indirect
 	modernc.org/opt v0.1.3 // indirect

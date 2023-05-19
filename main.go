@@ -1,15 +1,12 @@
 package main
 
 import (
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/axllent/mailpit/cmd"
 	sendmail "github.com/axllent/mailpit/sendmail/cmd"
-	"github.com/axllent/mailpit/utils/logger"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -18,12 +15,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	go func() {
-		logger.Log().Infof("[http] starting metrics server on http://localhost:2112/metrics")
-		http.Handle("/metrics", promhttp.Handler())
-		http.ListenAndServe(":2112", nil)
-	}()
 
 	// running directly
 	if normalize(filepath.Base(exec)) == normalize(filepath.Base(os.Args[0])) {

@@ -5,7 +5,6 @@ import (
 	"embed"
 	"io"
 	"io/fs"
-	"net/http"
 	"os"
 	"strings"
 	"sync/atomic"
@@ -16,6 +15,7 @@ import (
 	"github.com/axllent/mailpit/server/websockets"
 	"github.com/axllent/mailpit/utils/logger"
 	"github.com/gorilla/mux"
+	"net/http"
 )
 
 //go:embed ui
@@ -23,6 +23,7 @@ var embeddedFS embed.FS
 
 // Listen will start the httpd
 func Listen() {
+
 	isReady := &atomic.Value{}
 	isReady.Store(false)
 

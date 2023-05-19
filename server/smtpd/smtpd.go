@@ -7,51 +7,63 @@ import (
 	"net/mail"
 	"regexp"
 	"strings"
-	"time"
 	"sync/atomic"
+	"time"
 
 	"github.com/axllent/mailpit/config"
 	"github.com/axllent/mailpit/storage"
 	"github.com/axllent/mailpit/utils/logger"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/theidexisted/smtpd"
+	"net/http"
 )
 
 var (
-	MailReceived = promauto.NewGauge(prometheus.GaugeOpts{
+	MailReceived = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "received_mails_total",
 		Help: "The total number of received mails",
-	})
-	sessionSoFar = promauto.NewGauge(prometheus.GaugeOpts{
+		},
+		[]string{"source_ip"},
+	)
+	AccumulatedSession = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "accumulate_session_cnt",
 		Help: "The total number of history session",
-	})
-
-	sessionNum = promauto.NewGauge(prometheus.GaugeOpts{
+		},
+		[]string{"source_ip"},
+	)
+	SessionNum = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "realtime_session",
 		Help: "The realtime mail client sessions",
-	})
-	mailReceiveLatencyHist = promauto.NewHistogram(prometheus.HistogramOpts{
+		},
+		[]string{"source_ip"},
+	)
+	MailReceiveLatencyHist = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "received_mails_latency_hist",
 		Help:    "The latency(in us) of received mails(hello to data transfer done)",
 		Buckets: prometheus.ExponentialBuckets(200, 1.8, 15),
-	})
+	},
+	[]string{"source_ip"},
+	)
 	SimulateReceiveLatencyUS int64 = 0
 )
 
+func ExtractIP(addr net.Addr) string {
+	return strings.Split(addr.String(), ":")[0]
+}
 
-func mailSessionOpHandler(isNewConnection bool ) {
+func mailSessionOpHandler(origin net.Addr, isNewConnection bool) {
 	if isNewConnection {
-		sessionNum.Inc()
-		sessionSoFar.Inc()
+		SessionNum.WithLabelValues(ExtractIP(origin)).Inc()
+		AccumulatedSession.WithLabelValues(ExtractIP(origin)).Inc()
 	} else {
-		sessionNum.Dec()
+		SessionNum.WithLabelValues(ExtractIP(origin)).Dec()
 	}
 }
 
-func mailReceiveLatency(elapsed time.Duration) {
-	mailReceiveLatencyHist.Observe(float64(elapsed.Microseconds()))
+func mailReceiveLatency(origin net.Addr, elapsed time.Duration) {
+	MailReceiveLatencyHist.WithLabelValues(ExtractIP(origin)).Observe(float64(elapsed.Microseconds()))
 }
 
 func mailHandler(origin net.Addr, from string, to []string, data []byte) error {
@@ -76,7 +88,7 @@ func mailHandler(origin net.Addr, from string, to []string, data []byte) error {
 	lat := time.Microsecond * time.Duration(atomic.LoadInt64(&SimulateReceiveLatencyUS))
 	logger.Log().Debugf("[smtp] Simulate server latency with sleep :%s", lat)
 	time.Sleep(lat)
-	MailReceived.Inc()
+	MailReceived.WithLabelValues(ExtractIP(origin)).Inc()
 
 	subject := msg.Header.Get("Subject")
 	logger.Log().Debugf("[smtp] received (%s) from:%s to:%s subject:%q", cleanIP(origin), from, to[0], subject)
@@ -101,6 +113,17 @@ func authHandlerAny(remoteAddr net.Addr, mechanism string, username []byte, pass
 
 // Listen starts the SMTPD server
 func Listen() error {
+	globalReg := prometheus.NewRegistry()
+	globalReg.MustRegister(MailReceived)
+	globalReg.MustRegister(AccumulatedSession)
+	globalReg.MustRegister(SessionNum)
+	globalReg.MustRegister(MailReceiveLatencyHist)
+	go func() {
+		logger.Log().Infof("[http] starting metrics server on http://localhost:2112/metrics")
+		http.Handle("/metrics", promhttp.HandlerFor(globalReg, promhttp.HandlerOpts{}))
+		http.ListenAndServe(":2112", nil)
+	}()
+
 	if config.SMTPAuthAllowInsecure {
 		if config.SMTPAuthFile != "" {
 			logger.Log().Infof("[smtp] enabling login auth via %s (insecure)", config.SMTPAuthFile)
@@ -125,7 +148,7 @@ func listenAndServe(addr string, handler smtpd.Handler, authHandler smtpd.AuthHa
 		Addr:                  addr,
 		Handler:               handler,
 		ReceiveLatencyHandler: mailReceiveLatency,
-		SessionOpHandler: mailSessionOpHandler,
+		SessionOpHandler:      mailSessionOpHandler,
 		Appname:               "Mailpit",
 		Hostname:              "",
 		AuthHandler:           nil,

@@ -196,14 +196,18 @@ func DeleteMessages(w http.ResponseWriter, r *http.Request) {
 			httpError(w, err.Error())
 			return
 		}
-		smtpd.MailReceived.Set(0)
+		smtpd.MailReceived.Reset()
 	} else {
 		for _, id := range data.IDs {
 			if err := storage.DeleteOneMessage(id); err != nil {
 				httpError(w, err.Error())
 				return
 			}
-			smtpd.MailReceived.Dec()
+			// FIXME Can't ensure the consistency of the counter now
+			smtpd.MailReceived.Reset()
+			smtpd.AccumulatedSession.Reset()
+			smtpd.SessionNum.Reset()
+			smtpd.MailReceiveLatencyHist.Reset()
 		}
 	}
 

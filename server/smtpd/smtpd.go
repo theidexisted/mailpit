@@ -42,7 +42,7 @@ var (
 	MailReceiveLatencyHist = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "received_mails_latency_hist",
 		Help:    "The latency(in us) of received mails(hello to data transfer done)",
-		Buckets: prometheus.ExponentialBuckets(200, 1.8, 15),
+		Buckets: prometheus.ExponentialBuckets(200, 2, 20),
 	},
 	[]string{"source_ip"},
 	)
@@ -119,9 +119,9 @@ func Listen() error {
 	globalReg.MustRegister(SessionNum)
 	globalReg.MustRegister(MailReceiveLatencyHist)
 	go func() {
-		logger.Log().Infof("[http] starting metrics server on http://localhost:2112/metrics")
+		logger.Log().Infof("[http] starting metrics server on http://0.0.0.0:2112/metrics")
 		http.Handle("/metrics", promhttp.HandlerFor(globalReg, promhttp.HandlerOpts{}))
-		http.ListenAndServe(":2112", nil)
+		http.ListenAndServe("0.0.0.0:2112", nil)
 	}()
 
 	if config.SMTPAuthAllowInsecure {

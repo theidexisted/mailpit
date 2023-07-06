@@ -308,10 +308,8 @@ github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKsk=
 github.com/tg123/go-htpasswd v1.2.1 h1:i4wfsX1KvvkyoMiHZzjS0VzbAPWfxzI8INcZAKtutoU=
 github.com/tg123/go-htpasswd v1.2.1/go.mod h1:erHp1B86KXdwQf1X5ZrLb7erXZnWueEQezb2dql4q58=
-github.com/theidexisted/smtpd v0.9.5 h1:odEEgUUC+6PMVP5bEHdhf+8T3J9LwAkDU5GnFMXCnBk=
-github.com/theidexisted/smtpd v0.9.5/go.mod h1:Vp8AsT6hcZCDW3zfLRIoxpoaUqnkj/k1owf3SVelWqU=
-github.com/theidexisted/smtpd v0.9.6 h1:cWRJLyYKabSEAap6VQ4/3afPBAA9BlffBoRjUe0eQys=
-github.com/theidexisted/smtpd v0.9.6/go.mod h1:Vp8AsT6hcZCDW3zfLRIoxpoaUqnkj/k1owf3SVelWqU=
+github.com/theidexisted/smtpd v0.9.7 h1:ADMXdU7Je0YNGSf8H34r5nVwWz4x96+RFyDC9joCVpE=
+github.com/theidexisted/smtpd v0.9.7/go.mod h1:Vp8AsT6hcZCDW3zfLRIoxpoaUqnkj/k1owf3SVelWqU=
 github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=
 github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyCJ6HpOuEn7z0Csc=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=

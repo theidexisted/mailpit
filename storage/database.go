@@ -29,35 +29,34 @@ import (
 	"github.com/mattn/go-shellwords"
 	uuid "github.com/satori/go.uuid"
 
-
 	// sqlite (native) - https://gitlab.com/cznic/sqlite
-	_ "modernc.org/sqlite"
 	"sync"
+
+	_ "github.com/mattn/go-sqlite3"
+	//_ "modernc.org/sqlite"
 )
 
 type SafeTime struct {
-    t  time.Time
-    mu sync.RWMutex
+	t  time.Time
+	mu sync.RWMutex
 }
 
 func (t *SafeTime) Time() time.Time {
-    t.mu.RLock()
-    defer t.mu.RUnlock()
-    return t.t
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.t
 }
-
 
 func (t *SafeTime) SetTimeNow() {
-    t.mu.Lock()
-    defer t.mu.Unlock()
-    t.t = time.Now()
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.t = time.Now()
 }
 
-
 func (t *SafeTime) SetTime(tm time.Time) {
-    t.mu.Lock()
-    defer t.mu.Unlock()
-    t.t = tm
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.t = tm
 }
 
 var (
@@ -118,6 +117,7 @@ type DBMailSummary struct {
 // InitDB will initialise the database
 func InitDB() error {
 	p := config.DataFile
+	p = "memory"
 
 	if p == "" {
 		// when no path is provided then we create a temporary file
@@ -136,11 +136,11 @@ func InitDB() error {
 
 	dsn := fmt.Sprintf("file:%s?cache=shared", p)
 	if p == "memory" {
-		dsn  = "file::memory:"
+		dsn = "file:test.db?cache=shared&mode=memory"
 	}
 	logger.Log().Debugf("[db] opening database %s", dsn)
 
-	db, err = sql.Open("sqlite", dsn)
+	db, err = sql.Open("sqlite3", dsn)
 	if err != nil {
 		return err
 	}

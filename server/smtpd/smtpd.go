@@ -43,9 +43,17 @@ var (
 		Name:    "received_mails_latency_hist",
 		Help:    "The latency(in us) of received mails(hello to data transfer done)",
 		Buckets: prometheus.ExponentialBuckets(200, 2, 20),
-	},
-	[]string{"source_ip"},
+		},
+		[]string{"source_ip"},
 	)
+	MailSizeHist = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "received_mails_size_hist",
+		Help:    "The size(in byte) of received mails",
+		Buckets: prometheus.ExponentialBuckets(200, 2, 20),
+		},
+		[]string{"source_ip"},
+	)
+
 	SimulateReceiveLatencyUS int64 = 0
 )
 
@@ -89,6 +97,7 @@ func mailHandler(origin net.Addr, from string, to []string, data []byte) error {
 	logger.Log().Debugf("[smtp] Simulate server latency with sleep :%s", lat)
 	time.Sleep(lat)
 	MailReceived.WithLabelValues(ExtractIP(origin)).Inc()
+	MailSizeHist.WithLabelValues(ExtractIP(origin)).Observe(float64(len(data)))
 
 	subject := msg.Header.Get("Subject")
 	logger.Log().Debugf("[smtp] received (%s) from:%s to:%s subject:%q", cleanIP(origin), from, to[0], subject)
@@ -118,6 +127,7 @@ func Listen() error {
 	globalReg.MustRegister(AccumulatedSession)
 	globalReg.MustRegister(SessionNum)
 	globalReg.MustRegister(MailReceiveLatencyHist)
+	globalReg.MustRegister(MailSizeHist)
 	go func() {
 		logger.Log().Infof("[http] starting metrics server on http://0.0.0.0:2112/metrics")
 		http.Handle("/metrics", promhttp.HandlerFor(globalReg, promhttp.HandlerOpts{}))

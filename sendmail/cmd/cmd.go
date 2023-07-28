@@ -114,6 +114,7 @@ func Perf() {
 	emailSize := 128
 	concurrencyNum := 8
 	perConcurrencyCnt := 128
+	reuseConnection := false
 
 	// override defaults from cli flags
 	flag.StringVar(&smtpAddr, "smtp-addr", smtpAddr, "SMTP server address")
@@ -121,6 +122,7 @@ func Perf() {
 	flag.IntVar(&emailSize, "emailsize", 128, "The mailsize")
 	flag.IntVar(&concurrencyNum, "concurrencyNum", 8, "The concurrencyNum")
 	flag.IntVar(&perConcurrencyCnt, "perConcurrencyCnt", 128, "The perConcurrencyCnt")
+	flag.BoolVar(&reuseConnection, "reuseConnection", false, "If to reuse the mail dial connection")
 	flag.BoolP("long-i", "i", false, "Ignored. This flag exists for sendmail compatibility.")
 	flag.BoolP("long-t", "t", false, "Ignored. This flag exists for sendmail compatibility.")
 	flag.BoolVarP(&verbose, "verbose", "v", false, "Verbose mode (sends debug output to stderr)")
@@ -152,19 +154,72 @@ func Perf() {
 		// provided on the command line.
 		recip = append(recip, msg.Header.Get("To"))
 	}
-	var wg  sync.WaitGroup
+	var wg sync.WaitGroup
 	for i:= 0; i < concurrencyNum; i += 1 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for j := 0; j < perConcurrencyCnt; j += 1 {
-				err = smtp.SendMail(smtpAddr, nil, fromAddr, recip, body)
-				if err != nil {
-					fmt.Fprintln(os.Stderr, "error sending mail")
-					logger.Log().Fatal(err)
-				}
+			if reuseConnection {
+				SendMailHoldCon(smtpAddr, fromAddr, perConcurrencyCnt, recip, body)
+			} else {
+				SendMailNoHoldCon(smtpAddr, fromAddr, perConcurrencyCnt, recip, body)
 			}
 		}()
 	}
 	wg.Wait()
+}
+
+func SendMailNoHoldCon(smtpAddr string, fromAddr string, perConcurrencyCnt int, recip []string, body []byte) {
+	for j := 0; j < perConcurrencyCnt; j += 1 {
+		err := smtp.SendMail(smtpAddr, nil, fromAddr, recip, body)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "error sending mail")
+			logger.Log().Fatal(err)
+		}
+	}
+ }
+
+func SendMailHoldCon(smtpAddr string, fromAddr string, perConcurrencyCnt int, recip []string, msg []byte) {
+	c, err := smtp.Dial(smtpAddr)
+	if err != nil {
+		if err = c.Hello(fromAddr); err != nil {
+			fmt.Fprintln(os.Stderr, fmt.Sprintf("error connecting smtp server: %s", err))
+			return
+		}
+	}
+
+	defer c.Quit()
+	for j := 0; j < perConcurrencyCnt; j += 1 {
+		err = SendMail(c, fromAddr, recip, msg)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "error sending mail")
+			logger.Log().Fatal(err)
+		}
+	}
+}
+
+func SendMail(c *smtp.Client, fromAddr string, recip []string, msg []byte) error {
+	var err error
+	if err = c.Mail(fromAddr); err != nil {
+		fmt.Fprintln(os.Stderr, "error mail call")
+		return err
+	}
+	for _, addr := range recip {
+		if err = c.Rcpt(addr); err != nil {
+			fmt.Fprintln(os.Stderr, "error rcpt call")
+			return err
+		}
+	}
+	w, err := c.Data()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error data call")
+		return err
+	}
+	defer w.Close()
+	_, err = w.Write(msg)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error write call")
+		return err
+	}
+	return nil
 }

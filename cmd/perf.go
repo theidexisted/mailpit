@@ -11,6 +11,7 @@ var (
 	emailSize = 128
 	concurrencyNum = 8
 	perConcurrencyCnt = 128
+	reuseConnection = false
 )
 
 // perfCmd
@@ -34,6 +35,7 @@ func init() {
 	perfCmd.Flags().IntVar(&emailSize, "emailsize", 128, "The mailsize")
 	perfCmd.Flags().IntVar(&concurrencyNum, "concurrencyNum", 8, "The concurrencyNum")
 	perfCmd.Flags().IntVar(&perConcurrencyCnt, "perConcurrencyCnt", 128, "The perConcurrencyCnt")
+	perfCmd.Flags().BoolVar(&reuseConnection, "reuseConnection", false, "If to reuse the mail dial connection")
 	perfCmd.Flags().BoolP("long-i", "i", false, "Ignored. This flag exists for sendmail compatibility.")
 	perfCmd.Flags().BoolP("long-t", "t", false, "Ignored. This flag exists for sendmail compatibility.")
 }

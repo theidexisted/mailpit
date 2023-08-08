@@ -174,7 +174,7 @@ func Perf() {
 
 	currentTime := time.Now()
 	diff := currentTime.Sub(start)
-	fmt.Printf("QPS: %d", (int)(float64(concurrencyNum) * float64(perConcurrencyCnt) / diff.Seconds()))
+	fmt.Printf("QPS: %d \n", (int)(float64(concurrencyNum) * float64(perConcurrencyCnt) / diff.Seconds()))
 }
 
 func SendMailNoHoldCon(smtpAddr string, fromAddr string, perConcurrencyCnt int, recip []string, body []byte) {

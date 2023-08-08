@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/user"
 	"sync"
+	"time"
 
 	"github.com/axllent/mailpit/utils/logger"
 	flag "github.com/spf13/pflag"
@@ -86,6 +87,8 @@ func Run() {
 }
 
 func Perf() {
+	start := time.Now()
+
 	host, err := os.Hostname()
 	if err != nil {
 		host = "localhost"
@@ -167,6 +170,11 @@ func Perf() {
 		}()
 	}
 	wg.Wait()
+
+
+	currentTime := time.Now()
+	diff := currentTime.Sub(start)
+	fmt.Printf("QPS: %d", (int)(float64(concurrencyNum) * float64(perConcurrencyCnt) / diff.Seconds()))
 }
 
 func SendMailNoHoldCon(smtpAddr string, fromAddr string, perConcurrencyCnt int, recip []string, body []byte) {
